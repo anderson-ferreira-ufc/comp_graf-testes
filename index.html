@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.JS - Exemplo de Projeções</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            background-color: rgba(0,0,0,0.5);
+            padding: 5px;
+            z-index: 100;
+        }
+        #renderer-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.5);
+            padding: 5px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Pressione 'P' para projeção Perspectiva, 'O' para projeção Ortográfica</div>
+    <div id="renderer-info"></div>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        /**
+         * Configuração inicial da cena, câmera e renderizador
+         */
+        
+        // Cria a cena
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x333333);
+        
+        // Configurações das câmeras
+        const aspectRatio = window.innerWidth / window.innerHeight;
+        let currentProjection = 'perspective';
+        
+        // Cria câmera perspectiva (padrão)
+        const perspectiveCamera = new THREE.PerspectiveCamera(
+            75,           // campo de visão (FOV)
+            aspectRatio,   // proporção de tela
+            0.1,          // plano de corte próximo
+            1000          // plano de corte distante
+        );
+        perspectiveCamera.position.set(5, 5, 5);
+        
+        // Cria câmera ortográfica
+        const orthoSize = 5;
+        const orthographicCamera = new THREE.OrthographicCamera(
+            -orthoSize * aspectRatio,  // esquerda
+            orthoSize * aspectRatio,   // direita
+            orthoSize,                 // topo
+            -orthoSize,                // base
+            0.1,                       // plano de corte próximo
+            1000                       // plano de corte distante
+        );
+        orthographicCamera.position.set(5, 5, 5);
+        
+        // Define a câmera ativa inicialmente
+        let activeCamera = perspectiveCamera;
+        
+        // Cria o renderizador
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+        
+        // Adiciona controles de órbita para interação com mouse
+        const controls = new THREE.OrbitControls(activeCamera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        /**
+         * Criação dos objetos da cena
+         */
+        
+        // Adiciona eixos de referência
+        const axesHelper = new THREE.AxesHelper(5);
+        scene.add(axesHelper);
+        
+        // Adiciona grade de referência
+        const gridHelper = new THREE.GridHelper(10, 10);
+        scene.add(gridHelper);
+        
+        // Cria um cubo colorido
+        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const cubeMaterials = [
+            new THREE.MeshBasicMaterial({ color: 0xff0000 }),  // direita - vermelho
+            new THREE.MeshBasicMaterial({ color: 0x00ff00 }),  // esquerda - verde
+            new THREE.MeshBasicMaterial({ color: 0x0000ff }),  // topo - azul
+            new THREE.MeshBasicMaterial({ color: 0xffff00 }),  // base - amarelo
+            new THREE.MeshBasicMaterial({ color: 0xff00ff }),  // frente - magenta
+            new THREE.MeshBasicMaterial({ color: 0x00ffff })   // trás - ciano
+        ];
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
+        cube.position.set(0, 0.5, 0);
+        scene.add(cube);
+        
+        // Cria uma esfera
+        const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(2, 0.5, 2);
+        scene.add(sphere);
+        
+        // Cria um cone
+        const coneGeometry = new THREE.ConeGeometry(0.5, 1, 32);
+        const coneMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+        cone.position.set(-2, 0.5, -2);
+        scene.add(cone);
+        
+        /**
+         * Manipuladores de eventos
+         */
+        
+        // Alterna entre projeções com teclado
+        document.addEventListener('keydown', (event) => {
+            if (event.key.toLowerCase() === 'p') {
+                activeCamera = perspectiveCamera;
+                currentProjection = 'perspective';
+                controls.object = activeCamera;
+                updateCameraInfo();
+            } else if (event.key.toLowerCase() === 'o') {
+                activeCamera = orthographicCamera;
+                currentProjection = 'orthographic';
+                controls.object = activeCamera;
+                updateCameraInfo();
+            }
+        });
+        
+        // Atualiza o tamanho da janela quando redimensionada
+        window.addEventListener('resize', () => {
+            const newAspectRatio = window.innerWidth / window.innerHeight;
+            
+            // Atualiza câmera perspectiva
+            perspectiveCamera.aspect = newAspectRatio;
+            perspectiveCamera.updateProjectionMatrix();
+            
+            // Atualiza câmera ortográfica
+            orthographicCamera.left = -orthoSize * newAspectRatio;
+            orthographicCamera.right = orthoSize * newAspectRatio;
+            orthographicCamera.top = orthoSize;
+            orthographicCamera.bottom = -orthoSize;
+            orthographicCamera.updateProjectionMatrix();
+            
+            // Atualiza renderizador
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        /**
+         * Funções auxiliares
+         */
+        
+        // Atualiza as informações da câmera na tela
+        function updateCameraInfo() {
+            const infoElement = document.getElementById('renderer-info');
+            infoElement.innerHTML = `
+                Projeção: ${currentProjection === 'perspective' ? 'Perspectiva' : 'Ortográfica'}<br>
+                Posição da Câmera: (${activeCamera.position.x.toFixed(2)}, 
+                                     ${activeCamera.position.y.toFixed(2)}, 
+                                     ${activeCamera.position.z.toFixed(2)})
+            `;
+        }
+        
+        /**
+         * Loop de animação
+         */
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Atualiza controles
+            controls.update();
+            
+            // Renderiza a cena com a câmera ativa
+            renderer.render(scene, activeCamera);
+        }
+        
+        // Inicializa informações e animação
+        updateCameraInfo();
+        animate();
+    </script>
+</body>
+</html>
